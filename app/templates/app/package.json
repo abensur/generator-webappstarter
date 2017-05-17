@@ -1,5 +1,5 @@
 {
-  "name": "<%=name%>",
+  "name": "dev",
   "version": "1.0.0",
   "author": "Rafael Abensur <rafael.abensur@convenia.com.br>",
   "private": true,

@@ -1,79 +1,76 @@
-'use strict';
-var yeoman = require('yeoman-generator');
-var chalk = require('chalk');
-var yosay = require('yosay');
+const Generator = require('yeoman-generator');
+const yosay = require('yosay');
+const _ = require('lodash');
 
-module.exports = yeoman.generators.Base.extend({
-  constructor: function () {
-    yeoman.generators.Base.apply(this, arguments);
+module.exports = class extends Generator {
+  constructor (args, opts) {
+    super(args, opts);
+  }
 
-    this.option('skip-install', {
-      desc: 'Whether dependencies should be installed',
-      defaults: false
-    });
-  },
+  initializing () {
+    this.log(yosay('Iniciando generator'))
+  }
 
-  askFor: function () {
-    var done = this.async();
-
-    // Have Yeoman greet the user.
-    this.log(yosay('I will give you a Simple Mobile Web App Boilerplate and Structure!'));
-
-    var prompts = [{
+  prompting () {
+    return this.prompt([{
       type: 'input',
       name: 'name',
-      message: 'Give your project a name:(products|account|config|favorite|creation|feed|feedback|dilog|invite|vote|event|share|monitor|follow,are invalid names).',
-      default: this.appname // Default to current folder name
-    }];
+      message : 'Give your project a name (kebab-case):',
+      default: _.kebabCase(this.appname)
+    }]).then(answers => {
+      if (answers.name != "") {
+        this.appname = answers.name
 
-    this.prompt(prompts, function (answers) {
-      this.projectName = answers.name;
+        this.config.set({
+          name: answers.name
+        });
 
-      // Save user configuration options to .yo-rc.json file
-      this.config.set({
-        projectName: this.projectName
-      });
-      this.config.save();
-
-      done();
-    }.bind(this));
-  },
-
-  writing: {
-    app: function () {
-      this.template('_package.json', 'package.json');
-
-      this.directory('app', './');
-    },
-
-    projectfiles: function () {
-      this.fs.copy(
-        this.templatePath('ftppass'),
-        this.destinationPath('.ftppass')
-      );
-      this.fs.copy(
-        this.templatePath('gitignore'),
-        this.destinationPath('.gitignore')
-      );
-      this.fs.copy(
-        this.templatePath('editorconfig'),
-        this.destinationPath('.editorconfig')
-      );
-      this.fs.copy(
-        this.templatePath('jshintrc'),
-        this.destinationPath('.jshintrc')
-      );
-    }
-  },
-
-  install: function () {
-    this.installDependencies({
-      bower: false,
-      npm: true,
-      skipInstall: this.options['skip-install'],
-      callback: function () {
-        console.log('Everything is ready!');
+        this.config.save();
       }
-    });
+    })
   }
-});
+
+  writing() {
+    this.fs.copy(
+      this.templatePath('app/**!(node_modules)/*!(package.json)'),
+      this.destinationPath(), { globOptions: { dot: true } }
+    );
+
+    this.fs.copy(
+      this.templatePath('app/src/**/*'),
+      this.destinationPath('src')
+    );
+
+    this.fs.copy(
+      this.templatePath('app/static/**/*'),
+      this.destinationPath('static')
+    );
+
+    this.fs.copyTpl(
+      this.templatePath('_package.json'),
+      this.destinationPath('package.json'),
+      { name: _.kebabCase(this.appname) }
+    );
+
+    const dotfiles = [
+      '.babelrc',
+      '.eslintignore',
+      '.eslintrc.js',
+      '.gitignore',
+      '.postcssrc.js',
+      'index.html',
+      'README.md'
+    ]
+
+    dotfiles.map(file => {
+      this.fs.copy(
+        this.templatePath(`app/${file}`),
+        this.destinationPath(`./${file}`)
+      )
+    })
+  }
+
+  install() {
+    this.installDependencies({bower: false, npm: false, yarn: true});
+  }
+}
